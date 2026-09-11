@@ -1,0 +1,1917 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>스마트러닝앱 지표 대시보드</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<link rel="stylesheet" as="style" crossorigin
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<style>
+  :root {
+    --bg: #FFFAF5;
+    --card: #FFFFFF;
+    --border: #F1E4D6;
+    --primary: #FF8551;
+    --primary-soft: #FFE3D2;
+    --secondary: #6FB3D9;
+    --secondary-soft: #DCEEF8;
+    --success: #7FBA9D;
+    --warning: #F2B85C;
+    --pink: #E27A9C;
+    --purple: #9C8BD9;
+    --danger: #E27A7A;
+    --text: #2D3748;
+    --muted: #8A94A6;
+    --shadow: 0 4px 18px rgba(255, 133, 81, 0.08);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg); color: var(--text);
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-feature-settings: 'tnum';
+    line-height: 1.5;
+  }
+  .container { max-width: 1280px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  header.page-head {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px; margin-bottom: 24px;
+  }
+  .page-head h1 { font-size: 24px; font-weight: 700; margin: 0 0 6px 0; letter-spacing: -0.3px; }
+  .page-head .subtitle { color: var(--muted); font-size: 13px; }
+  .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .updated { font-size: 12px; color: var(--muted); }
+  .seg {
+    display: inline-flex; background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 4px; box-shadow: var(--shadow);
+  }
+  .seg button {
+    border: 0; background: transparent; padding: 7px 13px; border-radius: 8px;
+    font-size: 12px; font-weight: 600; color: var(--muted);
+    cursor: pointer; transition: all 0.18s ease;
+  }
+  .seg button.active { background: var(--primary); color: #fff; }
+  .seg button:hover:not(.active) { background: var(--primary-soft); color: var(--primary); }
+
+  .date-range {
+    display: none; align-items: center; gap: 8px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 6px 10px; box-shadow: var(--shadow);
+    font-size: 13px; margin-bottom: 12px;
+  }
+  .date-range.show { display: inline-flex; }
+  .date-range input[type="date"] {
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 8px; font-size: 12px; font-family: inherit;
+    color: var(--text); background: #FFFDF9;
+  }
+  .date-range button {
+    border: 0; background: var(--primary); color: #fff;
+    padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
+    cursor: pointer;
+  }
+  .date-range .sep { color: var(--muted); }
+  .range-info { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+
+  .grid { display: grid; gap: 14px; }
+  .grid-kpi-5 { grid-template-columns: repeat(5, 1fr); }
+  .grid-kpi-4 { grid-template-columns: repeat(4, 1fr); }
+  .grid-2 { grid-template-columns: 2fr 1fr; }
+  .grid-eq-2 { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 960px) {
+    .grid-kpi-5 { grid-template-columns: repeat(2, 1fr); }
+    .grid-kpi-4 { grid-template-columns: repeat(2, 1fr); }
+    .grid-2, .grid-eq-2 { grid-template-columns: 1fr; }
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px; box-shadow: var(--shadow);
+  }
+  .kpi { display: flex; flex-direction: column; gap: 6px; }
+  .kpi .label {
+    font-size: 12px; color: var(--muted); font-weight: 600;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .kpi .value { font-size: 24px; font-weight: 700; letter-spacing: -0.6px; }
+  .kpi .sub { font-size: 11px; color: var(--muted); }
+  .delta {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 999px;
+  }
+  .delta.up { background: #EAF6F0; color: var(--success); }
+  .delta.down { background: #FBE7E7; color: var(--danger); }
+  .delta.flat { background: #F2F4F7; color: var(--muted); }
+  .kpi.derived .value { color: var(--primary); }
+  .kpi { position: relative; }
+  .goal-btn {
+    position: absolute; top: 12px; right: 12px;
+    background: transparent; border: 0; cursor: pointer;
+    color: var(--muted); font-size: 14px; padding: 2px 4px;
+    border-radius: 4px; opacity: 0.5; transition: all 0.15s ease;
+  }
+  .goal-btn:hover { opacity: 1; background: var(--primary-soft); color: var(--primary); }
+  .goal-info {
+    font-size: 11px; margin-top: 3px; padding: 3px 8px;
+    border-radius: 6px; display: inline-block; font-weight: 600;
+  }
+  .goal-info.ok { background: #EAF6F0; color: var(--success); }
+  .goal-info.miss { background: #FBE7E7; color: var(--danger); }
+  .goal-info.near { background: #FEF6E6; color: var(--warning); }
+
+  /* --- 인사이트 패널 --- */
+  .insight-panel {
+    background: linear-gradient(135deg, #FFF6EE 0%, #FEF0E5 100%);
+    border: 1px solid #FFD9C0; border-radius: 16px;
+    padding: 20px 22px; margin-bottom: 24px;
+  }
+  .insight-panel h2 {
+    font-size: 15px; margin: 0 0 4px 0; color: var(--primary);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .insight-panel .desc {
+    font-size: 12px; color: #8A6A54; margin: 0 0 14px 0;
+  }
+  .insight-cards {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px;
+  }
+  .insight-card {
+    background: #fff; border: 1px solid #FFE3D2; border-radius: 12px;
+    padding: 14px 16px; display: flex; flex-direction: column; gap: 6px;
+    border-left: 4px solid var(--muted);
+  }
+  .insight-card.good { border-left-color: var(--success); }
+  .insight-card.warn { border-left-color: var(--warning); }
+  .insight-card.bad  { border-left-color: var(--danger); }
+  .insight-card.info { border-left-color: var(--secondary); }
+  .insight-card .ic-title {
+    font-size: 12px; font-weight: 700; color: var(--text);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .insight-card .ic-value {
+    font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: -0.3px;
+  }
+  .insight-card .ic-body { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+  /* 목표 설정 모달 */
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0;
+    background: rgba(45,55,72,0.4); z-index: 100;
+    align-items: center; justify-content: center;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal {
+    background: #fff; border-radius: 14px; padding: 24px;
+    min-width: 320px; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .modal h3 { margin: 0 0 6px 0; font-size: 16px; }
+  .modal p { margin: 0 0 16px 0; font-size: 12px; color: var(--muted); }
+  .modal input {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 14px; font-family: inherit;
+  }
+  .modal-actions {
+    display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end;
+  }
+
+  /* YoY 비교 표 */
+  .yoy-seg {
+    display: inline-flex; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 3px; margin-bottom: 14px;
+  }
+  .yoy-seg button {
+    border: 0; background: transparent; padding: 7px 14px; border-radius: 7px;
+    font-size: 12px; font-weight: 600; color: var(--muted);
+    cursor: pointer; transition: all 0.15s ease; font-family: inherit;
+  }
+  .yoy-seg button.active { background: var(--primary); color: #fff; }
+  .yoy-seg button:hover:not(.active) { background: var(--primary-soft); color: var(--primary); }
+  .yoy-desc {
+    font-size: 12px; color: var(--muted); margin-bottom: 12px; line-height: 1.6;
+  }
+  .yoy-desc strong { color: var(--text); font-weight: 600; }
+  .yoy-table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+  }
+  .yoy-table th {
+    background: var(--primary-soft); color: var(--primary); font-weight: 700;
+    padding: 10px 12px; text-align: center; border-bottom: 1px solid var(--border);
+    font-size: 11px;
+  }
+  .yoy-table td {
+    padding: 12px; text-align: center; border-bottom: 1px solid #F7F0E7;
+    font-size: 13px;
+  }
+  .yoy-table td:first-child, .yoy-table th:first-child {
+    text-align: left;
+  }
+  .yoy-table td.strong { font-weight: 700; }
+
+  /* 인사이트 모달 */
+  .insight-btn {
+    background: linear-gradient(135deg, var(--primary), #F26D38);
+    color: #fff; border: 0; padding: 9px 16px; border-radius: 10px;
+    font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit;
+    box-shadow: 0 3px 12px rgba(255, 133, 81, 0.25);
+    transition: transform 0.15s ease;
+  }
+  .insight-btn:hover { transform: translateY(-1px); box-shadow: 0 5px 16px rgba(255, 133, 81, 0.35); }
+
+  .insight-modal-bd {
+    display: none; position: fixed; inset: 0;
+    background: rgba(45,55,72,0.55); z-index: 200;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .insight-modal-bd.show { display: flex; }
+  .insight-modal {
+    background: #fff; border-radius: 16px; padding: 0;
+    max-width: 900px; width: 100%; max-height: 90vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 25px 70px rgba(0,0,0,0.3);
+  }
+  .insight-modal-head {
+    padding: 20px 24px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--bg); border-radius: 16px 16px 0 0;
+  }
+  .insight-modal-head h2 {
+    margin: 0; font-size: 17px; color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .insight-modal-close {
+    background: transparent; border: 0; font-size: 22px;
+    color: var(--muted); cursor: pointer; padding: 2px 8px;
+    border-radius: 6px;
+  }
+  .insight-modal-close:hover { background: #F2F4F7; color: var(--text); }
+  .insight-modal-body {
+    padding: 24px; overflow-y: auto; flex: 1;
+  }
+  .insight-tabs {
+    display: flex; gap: 6px; margin-bottom: 20px;
+    border-bottom: 1px solid var(--border); padding-bottom: 0;
+  }
+  .insight-tabs button {
+    border: 0; background: transparent; padding: 10px 14px;
+    font-size: 13px; font-weight: 600; color: var(--muted);
+    cursor: pointer; font-family: inherit;
+    border-bottom: 3px solid transparent; margin-bottom: -1px;
+  }
+  .insight-tabs button.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .insight-content h3 {
+    font-size: 14px; margin: 20px 0 8px; color: var(--text);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .insight-content h3:first-child { margin-top: 0; }
+  .insight-content p { font-size: 13px; margin: 0 0 12px; line-height: 1.65; color: #4A5568; }
+  .insight-content ul, .insight-content ol { padding-left: 20px; margin: 0 0 14px; font-size: 13px; line-height: 1.7; color: #4A5568; }
+  .insight-content li { margin-bottom: 4px; }
+  .insight-content table {
+    width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0 14px;
+  }
+  .insight-content th {
+    background: var(--primary-soft); color: var(--primary); font-weight: 700;
+    padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border);
+  }
+  .insight-content td { padding: 8px 10px; border-bottom: 1px solid #F7F0E7; }
+  .insight-content .callout {
+    background: var(--secondary-soft); border-left: 4px solid var(--secondary);
+    padding: 12px 14px; border-radius: 0 8px 8px 0; margin: 12px 0;
+    font-size: 12px; color: #2D5673; line-height: 1.6;
+  }
+  .insight-content .callout.warn { background: #FEF6E6; border-left-color: var(--warning); color: #8A6D3B; }
+  .insight-content .callout.bad { background: #FBE7E7; border-left-color: var(--danger); color: #8B3A3A; }
+  .insight-content .callout.good { background: #EAF6F0; border-left-color: var(--success); color: #2F6B4B; }
+  .insight-content .callout strong { font-weight: 700; }
+  .badge-red { background: #E27A7A; color: #fff; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .badge-green { background: #7FBA9D; color: #fff; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .badge-blue { background: #6FB3D9; color: #fff; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+
+  .section-title {
+    font-size: 14px; font-weight: 700; margin: 26px 0 12px 0;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::before {
+    content: ''; width: 4px; height: 15px;
+    background: var(--primary); border-radius: 2px;
+  }
+  .chart-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 12px; gap: 12px;
+  }
+  .chart-head h3 { font-size: 14px; font-weight: 700; margin: 0 0 4px 0; }
+  .chart-head p { font-size: 11px; color: var(--muted); margin: 0; }
+  .legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
+  .legend .dot {
+    display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; margin-right: 5px; vertical-align: middle;
+  }
+  .chart-wrap { position: relative; height: 260px; }
+  .chart-wrap.tall { height: 300px; }
+
+  .help-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #ECEEF2; color: var(--muted); font-size: 10px; cursor: help;
+  }
+
+  .footnote {
+    margin-top: 30px; padding: 16px 18px;
+    background: var(--secondary-soft); border: 1px solid #C9E2EE;
+    border-radius: 12px; font-size: 12px; color: #41617A; line-height: 1.7;
+  }
+  .footnote h4 { margin: 0 0 8px 0; font-size: 12px; color: #2D5673; }
+
+  /* --- 데이터 입력 섹션 --- */
+  .input-section {
+    margin-top: 40px; padding: 22px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; box-shadow: var(--shadow);
+  }
+  .input-section h2 {
+    font-size: 16px; margin: 0 0 4px 0; display: flex; align-items: center; gap: 8px;
+  }
+  .input-section .desc { font-size: 12px; color: var(--muted); margin: 0 0 14px 0; }
+  .input-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .btn {
+    border: 0; padding: 8px 14px; border-radius: 8px; font-size: 12px;
+    font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: #F26D38; }
+  .btn-secondary { background: var(--secondary-soft); color: #2D5673; }
+  .btn-secondary:hover { background: #C9E2EE; }
+  .btn-danger { background: #FBE7E7; color: var(--danger); }
+  .table-wrap { overflow-x: auto; max-height: 360px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; }
+  table.data-table {
+    width: 100%; border-collapse: collapse; font-size: 12px; background: #fff;
+  }
+  table.data-table thead th {
+    background: var(--primary-soft); color: var(--primary); font-weight: 700;
+    padding: 10px 8px; text-align: center; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 1;
+  }
+  table.data-table td {
+    padding: 6px 4px; border-bottom: 1px solid #F7F0E7; text-align: center;
+  }
+  table.data-table td input {
+    width: 100%; border: 1px solid transparent; padding: 5px 6px;
+    font-size: 12px; text-align: center; font-family: inherit;
+    background: transparent; color: var(--text); border-radius: 6px;
+  }
+  table.data-table td input:focus {
+    outline: none; border-color: var(--primary); background: #FFFDF9;
+  }
+  table.data-table td input[type="date"] { min-width: 120px; }
+  table.data-table td.del-cell { width: 40px; }
+  .del-btn {
+    background: transparent; border: 0; color: var(--muted); cursor: pointer;
+    font-size: 14px; padding: 4px 8px; border-radius: 4px;
+  }
+  .del-btn:hover { color: var(--danger); background: #FBE7E7; }
+  .input-hint {
+    margin-top: 12px; font-size: 11px; color: var(--muted); line-height: 1.6;
+  }
+  .input-hint code {
+    background: #F4EEE7; padding: 1px 5px; border-radius: 4px; color: var(--primary);
+  }
+
+  /* --- Google Sheets 연결 --- */
+  .sheets-connect {
+    margin-top: 30px; padding: 18px 20px;
+    background: var(--secondary-soft); border: 1px solid #C9E2EE;
+    border-radius: 14px;
+  }
+  .sheets-connect h2 {
+    font-size: 15px; margin: 0 0 4px 0; color: #2D5673;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sheets-connect .desc { font-size: 12px; color: #41617A; margin: 0 0 12px 0; }
+  .sheets-status {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 600; padding: 6px 12px;
+    background: #fff; border-radius: 999px; margin-bottom: 12px;
+  }
+  .sheets-status .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--muted);
+  }
+  .sheets-status.connected { color: var(--success); }
+  .sheets-status.connected .dot { background: var(--success); }
+  .sheets-status.disconnected { color: var(--muted); }
+  .sheets-actions {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  }
+  .sheets-actions input[type="url"] {
+    flex: 1; min-width: 280px;
+    border: 1px solid #C9E2EE; border-radius: 8px;
+    padding: 9px 12px; font-size: 12px; font-family: inherit;
+    background: #fff; color: var(--text);
+  }
+  .sheets-actions input[type="url"]:focus {
+    outline: none; border-color: var(--secondary);
+  }
+  .sheets-actions input[type="url"]:disabled {
+    background: #F4F7FA; color: var(--muted);
+  }
+  .sheets-help {
+    margin-top: 14px; font-size: 12px; color: #41617A;
+  }
+  .sheets-help summary {
+    cursor: pointer; font-weight: 600; padding: 4px 0;
+    color: #2D5673;
+  }
+  .sheets-help summary:hover { color: var(--secondary); }
+  .sheets-help ol { margin: 10px 0 0 20px; padding: 0; line-height: 1.9; }
+  .sheets-help li { margin-bottom: 4px; }
+  .sheets-help code {
+    background: #fff; padding: 1px 6px; border-radius: 4px;
+    color: var(--primary); font-size: 11px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header class="page-head">
+    <div>
+      <h1>📊 스마트러닝앱 지표 대시보드</h1>
+      <div class="subtitle">신규 유입 · 활성화 · 위젯 채택 현황을 한눈에</div>
+    </div>
+    <div class="toolbar">
+      <span class="updated" id="lastUpdated">마지막 갱신: —</span>
+      <button class="insight-btn" id="openInsightModal">📖 학사 인사이트 리포트</button>
+      <div class="seg" role="tablist">
+        <button data-range="daily" class="active">일별</button>
+        <button data-range="weekly">주별</button>
+        <button data-range="monthly">월별</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="date-range show" id="dateRange">
+    <span style="color:var(--muted); font-size:12px; margin-right:4px;">📅 기간</span>
+    <input type="date" id="dateFrom" />
+    <span class="sep">~</span>
+    <input type="date" id="dateTo" />
+    <button id="applyRange">적용</button>
+    <button id="resetRange" style="background:var(--bg); color:var(--muted); border:1px solid var(--border);">전체</button>
+  </div>
+  <div class="range-info" id="rangeInfo">기간: —</div>
+
+  <!-- 🔍 자동 인사이트 패널 -->
+  <div class="insight-panel">
+    <h2>🔍 오늘의 인사이트</h2>
+    <p class="desc">데이터에서 자동 감지된 신호 · 이상치 · 목표 대비 갭</p>
+    <div class="insight-cards" id="insightCards"></div>
+  </div>
+
+  <!-- ① 원본 KPI 5개 -->
+  <div class="section-title">핵심 활성 지표 (원본)</div>
+  <div class="grid grid-kpi-5">
+    <div class="card kpi">
+      <div class="label">DAU <span class="help-icon" title="Daily Active Users — 오늘 로그인한 순 유저 수">?</span></div>
+      <div class="value" id="kpi-dau">—</div>
+      <div><span class="delta flat" id="delta-dau">—</span> <span class="sub">전기간 대비</span></div>
+    </div>
+    <div class="card kpi">
+      <div class="label">신규 회원</div>
+      <div class="value" id="kpi-signup">—</div>
+      <div><span class="delta flat" id="delta-signup">—</span> <span class="sub">전기간 대비</span></div>
+    </div>
+    <div class="card kpi">
+      <div class="label">신규 첫 로그인 <span class="help-icon" title="가입 후 30일 이내 앱에 처음 로그인한 유저">?</span></div>
+      <div class="value" id="kpi-firstlogin">—</div>
+      <div><span class="delta flat" id="delta-firstlogin">—</span> <span class="sub">전기간 대비</span></div>
+    </div>
+    <div class="card kpi">
+      <div class="label">신규 기기 등록 <span class="help-icon" title="player_id 기준 신규 발급 기기 수 (강의 수강 필수)">?</span></div>
+      <div class="value" id="kpi-device">—</div>
+      <div><span class="delta flat" id="delta-device">—</span> <span class="sub">전기간 대비</span></div>
+    </div>
+    <div class="card kpi">
+      <div class="label">위젯 이용자 <span class="help-icon" title="퀵/최근/통계 중 1개 이상 설치한 로그인 유저">?</span></div>
+      <div class="value" id="kpi-widget">—</div>
+      <div><span class="delta flat" id="delta-widget">—</span> <span class="sub">전기간 대비</span></div>
+    </div>
+  </div>
+
+  <!-- ② 파생 KPI 4개 -->
+  <div class="section-title">파생 지표 (인사이트)</div>
+  <div class="grid grid-kpi-4">
+    <div class="card kpi derived">
+      <button class="goal-btn" data-goal="activation" title="목표 설정">🎯</button>
+      <div class="label">Activation Rate <span class="help-icon" title="신규 첫 로그인 ÷ 신규 회원 — 가입 후 실제 앱을 켠 비율">?</span></div>
+      <div class="value" id="kpi-activation">—</div>
+      <div class="sub" id="sub-activation">—</div>
+      <div id="goal-activation"></div>
+    </div>
+    <div class="card kpi derived">
+      <button class="goal-btn" data-goal="courseStart" title="목표 설정">🎯</button>
+      <div class="label">강의 시작률 <span class="help-icon" title="신규 기기 등록 ÷ 신규 첫 로그인 — 로그인 후 강의 수강까지 진입한 비율">?</span></div>
+      <div class="value" id="kpi-coursestart">—</div>
+      <div class="sub" id="sub-coursestart">—</div>
+      <div id="goal-courseStart"></div>
+    </div>
+    <div class="card kpi derived">
+      <button class="goal-btn" data-goal="widgetAdoption" title="목표 설정">🎯</button>
+      <div class="label">Widget Adoption <span class="help-icon" title="위젯 이용자 ÷ DAU — 활성 유저 중 위젯 사용자 비율">?</span></div>
+      <div class="value" id="kpi-widgetrate">—</div>
+      <div class="sub" id="sub-widgetrate">—</div>
+      <div id="goal-widgetAdoption"></div>
+    </div>
+    <div class="card kpi derived">
+      <button class="goal-btn" data-goal="newShare" title="목표 설정">🎯</button>
+      <div class="label">DAU 내 신규 비중 <span class="help-icon" title="신규 첫 로그인 ÷ DAU">?</span></div>
+      <div class="value" id="kpi-newshare">—</div>
+      <div class="sub" id="sub-newshare">—</div>
+      <div id="goal-newShare"></div>
+    </div>
+  </div>
+
+  <!-- 🔄 YoY 비교 -->
+  <div class="section-title">🔄 기간 비교 (금년 vs 전년)</div>
+  <div class="card">
+    <div class="yoy-seg">
+      <button data-yoy="week" class="active">주간</button>
+      <button data-yoy="month">월간</button>
+      <button data-yoy="year">연간</button>
+    </div>
+    <div class="yoy-desc" id="yoyDesc">—</div>
+    <div id="yoyTableWrap" style="overflow-x:auto;"></div>
+  </div>
+
+  <!-- 차트 기간 필터 (상단 필터와 자동 동기화) -->
+  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-top:32px; margin-bottom:8px; padding:12px 16px; background:var(--card); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow);">
+    <div style="font-size:13px; font-weight:700; color:var(--text); display:flex; align-items:center; gap:8px;">
+      📈 차트 기간 필터 <span style="font-size:11px; color:var(--muted); font-weight:400;">(아래 모든 차트에 적용 · 상단 필터와 자동 동기화)</span>
+    </div>
+    <div class="seg" role="tablist">
+      <button data-range="daily" class="active">일별</button>
+      <button data-range="weekly">주별</button>
+      <button data-range="monthly">월별</button>
+    </div>
+  </div>
+
+  <!-- ③ 활성화 퍼널 -->
+  <div class="section-title">활성화 퍼널 (가입 → 첫 로그인 → 기기 등록)</div>
+  <div class="card">
+    <div class="chart-head">
+      <div>
+        <h3>일별 3단계 흐름</h3>
+        <p>세 값이 함께 움직이면 건강, 특정 단계만 꺾이면 그 지점이 병목</p>
+      </div>
+      <div class="legend">
+        <span><span class="dot" style="background:var(--primary)"></span>신규 회원</span>
+        <span><span class="dot" style="background:var(--secondary)"></span>신규 첫 로그인</span>
+        <span><span class="dot" style="background:var(--success)"></span>신규 기기 등록</span>
+      </div>
+    </div>
+    <div class="chart-wrap tall"><canvas id="chartFunnel"></canvas></div>
+  </div>
+
+  <!-- ④ DAU 추세 + Widget 추세 -->
+  <div class="section-title">추세 차트</div>
+  <div class="grid grid-eq-2">
+    <div class="card">
+      <div class="chart-head">
+        <div>
+          <h3>DAU 추세</h3>
+          <p>앱 전체 이용자 흐름</p>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="chartDau"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="chart-head">
+        <div>
+          <h3>Widget Adoption Rate 추세</h3>
+          <p>DAU 대비 위젯 이용자 비율</p>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="chartWidgetRate"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ⑤ 파생 지표 종합 -->
+  <div class="section-title">파생 지표 종합 추세</div>
+  <div class="card">
+    <div class="chart-head">
+      <div>
+        <h3>Activation Rate · 강의 시작률 · Widget Adoption</h3>
+        <p>세 파생 지표의 시간별 변화 (%)</p>
+      </div>
+    </div>
+    <div class="chart-wrap tall"><canvas id="chartDerived"></canvas></div>
+  </div>
+
+  <!-- 각주 -->
+  <div class="footnote">
+    <h4>📘 지표 정의</h4>
+    <strong>DAU</strong> — 해당일 앱 로그인한 순(unique) 유저 수. 1일 단위(00:00~23:59) 집계.<br />
+    <strong>신규 회원</strong> — 해당일 가입 완료된 회원 수. 신규 회원 정의는 "가입한 달 이력" 기준. (데이터 적재 시작: 2025-05-30)<br />
+    <strong>신규 첫 로그인</strong> — 가입 후 30일 이내 앱에 처음 로그인한 유저 수.<br />
+    <strong>신규 기기 등록</strong> — player_id 기준 신규 발급 기기 수. 강의 수강 시 기기 등록이 필수라 실질적 강의 시작 지표.<br />
+    <strong>위젯 이용자</strong> — 위젯(퀵/최근/통계) 중 1개 이상 설치=Y인 로그인 유저.<br />
+    <strong>Activation Rate</strong> = 신규 첫 로그인 ÷ 신규 회원 · <strong>강의 시작률</strong> = 신규 기기 등록 ÷ 신규 첫 로그인<br />
+    <strong>Widget Adoption</strong> = 위젯 이용자 ÷ DAU · <strong>DAU 내 신규 비중</strong> = 신규 첫 로그인 ÷ DAU
+  </div>
+
+  <!-- ⑥ Google Sheets 연결 -->
+  <div class="sheets-connect">
+    <h2>🔗 Google Sheets 연결</h2>
+    <p class="desc">시트를 연결하면 시트의 데이터가 대시보드에 자동 반영됩니다. 팀원 여러 명이 시트에 입력하고, 모두가 이 페이지에서 실시간으로 볼 수 있어요.</p>
+
+    <div class="sheets-status disconnected" id="sheetsStatus">
+      <span class="dot"></span>
+      <span id="sheetsStatusText">로컬 편집 모드 (연결된 시트 없음)</span>
+    </div>
+
+    <div class="sheets-actions">
+      <input type="url" id="sheetsUrlInput" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv" />
+      <button class="btn btn-primary" id="connectSheets">🔗 연결</button>
+      <button class="btn btn-secondary" id="refreshSheets" style="display:none;">🔄 새로고침</button>
+      <button class="btn btn-danger" id="disconnectSheets" style="display:none;">연결 해제</button>
+    </div>
+
+    <details class="sheets-help">
+      <summary>📖 Google Sheets 연결 방법 (처음이라면 클릭)</summary>
+      <ol>
+        <li><code>dashboard_template.xlsx</code> 파일을 Google Drive에 업로드 → 우클릭 → <strong>연결 앱 → Google Sheets로 열기</strong></li>
+        <li>열린 시트의 <code>daily_metrics</code> 탭에서 데이터를 입력·확인 (헤더 이름은 절대 변경하지 말 것)</li>
+        <li>상단 메뉴 <strong>파일 → 공유 → 웹에 게시</strong></li>
+        <li>왼쪽 드롭다운에서 <strong>daily_metrics 시트</strong> 선택, 오른쪽 드롭다운에서 <strong>쉼표로 구분된 값(.csv)</strong> 선택</li>
+        <li><strong>게시</strong> 버튼 클릭 → 발급된 URL 복사 (<code>...pub?output=csv</code> 형태)</li>
+        <li>위 입력창에 URL 붙여넣기 → <strong>🔗 연결</strong> 버튼 클릭</li>
+        <li>완료! 이후 시트에 데이터를 추가하면, 이 페이지에서 <strong>🔄 새로고침</strong> 버튼으로 즉시 반영할 수 있습니다.</li>
+      </ol>
+      <p style="margin-top:10px;">💡 팀에 공유하려면 이 <code>index.html</code>을 GitHub Pages 등에 올리고 URL을 공유하세요. 시트 데이터는 URL을 열 때마다 자동으로 최신 값이 로드됩니다.</p>
+    </details>
+  </div>
+
+  <!-- ⑦ 데이터 입력 섹션 -->
+  <div class="input-section">
+    <h2>✏️ 데이터 입력 (로컬 편집)</h2>
+    <p class="desc">시트를 연결하지 않았을 때 사용하는 편집 표입니다. 값이 바뀌면 위 대시보드가 즉시 갱신됩니다. (시트 연결 시 자동으로 비활성화)</p>
+
+    <div class="input-btns">
+      <button class="btn btn-primary" id="addRow">+ 행 추가</button>
+      <button class="btn btn-secondary" id="importCsv">📁 CSV 불러오기</button>
+      <button class="btn btn-secondary" id="exportCsv">💾 CSV 내보내기</button>
+      <button class="btn btn-secondary" id="loadSample">🔄 샘플 데이터로 초기화</button>
+      <input type="file" id="csvFileInput" accept=".csv" style="display:none" />
+    </div>
+
+    <div class="table-wrap">
+      <table class="data-table" id="dataTable">
+        <thead>
+          <tr>
+            <th>date</th>
+            <th>new_signup<br/><span style="font-weight:400; color:var(--muted); font-size:10px;">신규 회원</span></th>
+            <th>new_first_login<br/><span style="font-weight:400; color:var(--muted); font-size:10px;">신규 첫 로그인</span></th>
+            <th>dau<br/><span style="font-weight:400; color:var(--muted); font-size:10px;">앱 전체 이용자</span></th>
+            <th>new_device_registered<br/><span style="font-weight:400; color:var(--muted); font-size:10px;">신규 기기 등록</span></th>
+            <th>widget_users<br/><span style="font-weight:400; color:var(--muted); font-size:10px;">위젯 이용자</span></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="dataTbody"></tbody>
+      </table>
+    </div>
+
+    <div class="input-hint">
+      💡 <strong>사용 팁</strong>: 입력한 데이터는 브라우저에 자동 저장됩니다(<code>localStorage</code>). 팀 공유용으로는 <code>CSV 내보내기</code>로 파일을 저장한 뒤 GitHub Pages/사내 서버에 함께 올리거나, 시트로 옮겨 관리하세요.
+      <br />🔄 <strong>여러 명이 함께 관리</strong>하려면 Google Sheets 방식이 더 적합해요 (아래 GOOGLE_SHEETS_CSV_URL 설정 참고).
+    </div>
+  </div>
+
+</div>
+
+<!-- 학사 인사이트 리포트 모달 -->
+<div class="insight-modal-bd" id="insightModal">
+  <div class="insight-modal">
+    <div class="insight-modal-head">
+      <h2>📖 학사 인사이트 리포트</h2>
+      <button class="insight-modal-close" id="closeInsightModal">✕</button>
+    </div>
+    <div class="insight-modal-body">
+      <div class="insight-tabs">
+        <button class="active" data-tab="mapping">📅 학사 일정 매핑</button>
+        <button data-tab="findings">💡 핵심 발견</button>
+        <button data-tab="forecast">🔮 향후 예측</button>
+      </div>
+
+      <!-- Tab 1: 학사 일정 매핑 -->
+      <div class="insight-content" id="tab-mapping">
+        <h3>학사 일정과 실제 지표 변화 매핑</h3>
+        <p>수능·모평·방학·시험 시즌이 우리 서비스 지표에 어떻게 반영되었는지 시기별로 매핑한 내용입니다. 이 표는 "우연"이 아니라 "반복되는 사이클"을 보여줍니다.</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>시기</th>
+              <th>관찰된 지표 변화</th>
+              <th>학사 이벤트</th>
+              <th>해석</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>2025-06 초</td><td>DAU 상승</td><td>6월 모평 (6/4)</td><td>모평 대비·직후 학습 활성화 <span class="badge-green">정상</span></td></tr>
+            <tr><td>2025-07~08</td><td>DAU 지속 상승</td><td>여름방학</td><td>집중 학습 시즌 (성수기)</td></tr>
+            <tr><td>2025-09</td><td>DAU 최고 118K</td><td>9월 모평 + 학기 초</td><td>고3 최대 활성기</td></tr>
+            <tr><td>2025-10</td><td>소폭 하락</td><td>중간고사</td><td>학교 시험 준비 (일시 이동)</td></tr>
+            <tr><td>2025-11</td><td>급락 시작</td><td>🎯 수능 (11/13)</td><td>고3·N수 대규모 이탈 <span class="badge-red">예상 가능</span></td></tr>
+            <tr><td>2025-12</td><td>DAU 최저 + 신규 최고</td><td>예비 학년 유입기</td><td>다른 세그먼트 유입, 즉시 활성화 안 되는 게 정상</td></tr>
+            <tr><td>2026-01</td><td>신규 79K (최고)</td><td>겨울방학·학습 대비</td><td>예비 신입생 대량 획득기</td></tr>
+            <tr><td>2026-02</td><td>안정화</td><td>봄방학</td><td>3월 개학 대기</td></tr>
+            <tr><td>2026-03</td><td>DAU 재상승</td><td>새학기·3월 학평</td><td>12~1월 코호트 진짜 활성화 시작</td></tr>
+            <tr><td>2026-06-05</td><td>이상치 133K</td><td>6월 모평 (6/4)</td><td>모평 직후 급등 (반복 패턴 확인)</td></tr>
+            <tr><td>2026-07~08</td><td>지속 상승</td><td>여름방학</td><td>성수기 재진입</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout">
+          <strong>📌 핵심 결론:</strong> 학사 일정을 이해하면 대부분의 지표 변동은 "예측 가능한 사이클". 이상 이벤트가 있을 때만 별도 원인 조사 필요.
+        </div>
+
+        <h3>3대 반복 사이클</h3>
+        <ol>
+          <li><strong>사이클 1</strong> — 매년 11월→12월: 수능 후 대이탈 (N수 -25~-29%, 고3 -23~-27%, 3년 연속 동일)</li>
+          <li><strong>사이클 2</strong> — 12월→다음해 3월: 학년 진급 대이동 (고3→N수 +14~+23%, 고2→고3 진급)</li>
+          <li><strong>사이클 3</strong> — 매년 11월: N수 최고치 갱신 (2023: 87K → 2024: 89K → 2025: 90K)</li>
+        </ol>
+      </div>
+
+      <!-- Tab 2: 핵심 발견 -->
+      <div class="insight-content" id="tab-findings" style="display:none;">
+        <h3>⭐ 한 줄 요약</h3>
+        <div class="callout warn">
+          학사 사이클은 놀랄 만큼 반복되고 예측 가능. 하지만 <strong>총 회원 규모는 3년간 -10.8% 감소</strong> 중이며, 특히 <strong>고2 -21%</strong>로 미래 고3 파이프라인이 무너지고 있음. 유일한 밝은 신호는 <strong>중3 이하 +239%</strong>.
+        </div>
+
+        <h3>🚨 위기 신호 (3년 트렌드)</h3>
+        <div class="callout warn" style="margin-top:0;">
+          <strong>⚠️ 잠정치 안내:</strong> 아래 <strong>202608*</strong> 수치는 <strong>2026년 8월 20일까지의 진행 중 데이터</strong>입니다. 8월이 마감된 후 재계산이 필요하며, 실제 감소폭은 다를 수 있습니다. 다음 완전한 데이터가 확보되면 표를 다시 정리해주세요.
+        </div>
+        <table>
+          <thead><tr><th>지표</th><th>202308</th><th>202608 *</th><th>변화 (잠정)</th></tr></thead>
+          <tbody>
+            <tr><td>총합</td><td>322,626</td><td>287,915 *</td><td><span class="badge-red">▼ 10.8%</span></td></tr>
+            <tr><td>고3</td><td>71,135</td><td>56,822 *</td><td><span class="badge-red">▼ 20.1%</span></td></tr>
+            <tr><td>고2</td><td>22,700</td><td>17,861 *</td><td><span class="badge-red">▼ 21.3%</span></td></tr>
+            <tr><td>N수</td><td>78,936</td><td>75,883 *</td><td>▼ 3.9%</td></tr>
+            <tr><td>고1</td><td>12,556</td><td>12,175 *</td><td>▼ 3.0%</td></tr>
+            <tr><td>중3↓</td><td>873</td><td>2,957 *</td><td><span class="badge-green">▲ 238.7%</span></td></tr>
+            <tr><td>미입력</td><td>136,426</td><td>121,772 *</td><td>▼ 10.7%</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:11px; color:var(--muted); margin-top:-8px;">* 2026-08은 진행 중 · 8월 마감 후 재계산 필요 · 참고 지표로만 활용</p>
+
+        <h3>📊 확정 데이터 기준 최근 완전 월 비교 (참고)</h3>
+        <p style="font-size:12px;">가장 최근에 완료된 월(202607)을 전년 동월(202507)과 비교한 값입니다. 잠정치 없이 확정된 수치.</p>
+        <table>
+          <thead><tr><th>지표</th><th>202507</th><th>202607</th><th>YoY</th></tr></thead>
+          <tbody>
+            <tr><td>총합</td><td>326,093</td><td>318,483</td><td>▼ 2.3%</td></tr>
+            <tr><td>N수</td><td>82,178</td><td>82,271</td><td>+0.1%</td></tr>
+            <tr><td>고3</td><td>59,011</td><td>55,580</td><td>▼ 5.8%</td></tr>
+            <tr><td>고2</td><td>24,383</td><td>18,878</td><td><span class="badge-red">▼ 22.6%</span></td></tr>
+            <tr><td>고1</td><td>10,916</td><td>13,528</td><td><span class="badge-green">▲ 23.9%</span></td></tr>
+            <tr><td>중3↓</td><td>2,423</td><td>3,486</td><td><span class="badge-green">▲ 43.9%</span></td></tr>
+          </tbody>
+        </table>
+
+        <h3>🔴 가장 위험한 세그먼트: 고2</h3>
+        <p>고2 = 다음 해 고3의 씨앗. 지금 고2가 -21% 줄면 내년 고3 파이프라인이 함께 무너짐. 202608 고2 17,861명이 2027년 고3이 되며, 이는 역대 최저 예상.</p>
+
+        <h3>🟢 유일한 밝은 신호: 중3 이하</h3>
+        <p>3년간 <strong>+238.7% 성장</strong>, 최근 12개월도 +49%. 예비 고1 유입 채널이 작동 중. 이들을 고3까지 3년간 락인하는 장기 리텐션 프로그램이 필요.</p>
+
+        <h3>🌐 학령 인구 vs 자사 감소 비교</h3>
+        <div class="callout bad">
+          <strong>저출산 탓이 아닙니다.</strong><br/>
+          외부 수능 응시자 시장: <strong class="badge-green">+9.8%</strong> (3년) — 성장 중<br/>
+          우리 서비스 총합: <strong class="badge-red">-10.8%</strong> (3년) — 감소 중<br/>
+          → 시장 점유율(M/S) 하락 = 경쟁사 유출·서비스 경쟁력 저하 신호
+        </div>
+
+        <h3>📌 학년 미입력 42.3% 지속 문제</h3>
+        <p>3년간 계속 40% 이상 유지. 이 유저들은 학년별 마케팅·콘텐츠 전달 불가. 회원가입 UX 개선 최우선 과제.</p>
+
+        <h3>💡 즉시 확인해야 할 것</h3>
+        <ol>
+          <li>학년별 <strong>신규 가입 vs 이탈</strong> 분리 데이터 요청</li>
+          <li>경쟁사 벤치마킹 (메가스터디·이투스·EBS 등 앱 순위·리뷰)</li>
+          <li>고2·고3 이탈 유저 인터뷰 30명 (8주 내)</li>
+          <li>학년 미입력 유저의 가입 단계 UX 진단</li>
+        </ol>
+      </div>
+
+      <!-- Tab 3: 향후 예측 -->
+      <div class="insight-content" id="tab-forecast" style="display:none;">
+        <h3>📅 2026년 남은 시기 예측</h3>
+        <table>
+          <thead><tr><th>시점</th><th>예상 지표</th><th>대응 액션</th></tr></thead>
+          <tbody>
+            <tr><td>2026-09</td><td>총합 재상승 (320~340K)</td><td>9월 모평(9/3)·개학 콘텐츠·푸시 강화</td></tr>
+            <tr><td>2026-10</td><td>소폭 조정</td><td>중간고사 대비 특강</td></tr>
+            <tr><td><strong>2026-11</strong></td><td>연중 최고점 (340~350K)</td><td>수능 D-day 캠페인, N수 전환 사전 준비</td></tr>
+            <tr><td><strong>2026-12</strong></td><td>급락 (300~310K), 신규 최고</td><td>예비 학년 유입 극대화, 12월 코호트 락인 이벤트</td></tr>
+            <tr><td>2027-01</td><td>저점 유지</td><td>겨울방학 특강, 예비 신입생 콘텐츠</td></tr>
+            <tr><td>2027-03</td><td>재상승 (N수 +23%)</td><td>신학기 콘텐츠, 학년 진급 유저 리엔게이지먼트</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout warn">
+          <strong>⚠️ 2027년 걱정거리:</strong> 2027년 고3 = 현재 고2 (17,861명) = <strong>역대 최저 예상</strong>. 대비하지 않으면 2027년 전체 매출·활성 하락 불가피.
+        </div>
+
+        <h3>🎯 우선순위 액션</h3>
+        <ol>
+          <li><span class="badge-red">1순위</span> <strong>고2 이탈 원인 규명·방어</strong> — 8주 내 유저 인터뷰</li>
+          <li><span class="badge-green">2순위</span> <strong>중3 이하 락인 장기 프로그램</strong> — 학년 진급 시점 이벤트</li>
+          <li><span class="badge-blue">3순위</span> <strong>N수 강점 극대화</strong> — 24시간 서비스, 12월 골든타임 캠페인</li>
+          <li>4순위 학년 미입력 42% → 20% 개선 (지속)</li>
+          <li>5순위 대시보드 학사 캘린더·연간 사이클 오버레이 (완료 ✓)</li>
+        </ol>
+
+        <h3>🗓️ 연간 액션 캘린더 (매년 반복 적용)</h3>
+        <table>
+          <thead><tr><th>월</th><th>주요 이벤트</th><th>PM/PO 액션</th></tr></thead>
+          <tbody>
+            <tr><td>3</td><td>새학기, 3월 학평</td><td>신학기 콘텐츠, 학년 진급 유저 온보딩</td></tr>
+            <tr><td>6</td><td>6월 모평</td><td>모평 대비·오답분석 콘텐츠 강화</td></tr>
+            <tr><td>7~8</td><td>여름방학</td><td>집중 학습 캠페인, 특강 프로모션</td></tr>
+            <tr><td>9</td><td>9월 모평</td><td>수능 대비 파이널 콘텐츠, 고3 락인</td></tr>
+            <tr><td>11</td><td>수능</td><td>D-day 카운트다운, N수 전환 사전 준비</td></tr>
+            <tr><td>12</td><td>예비 학년 유입</td><td>예비 고3·고2·고1 코호트 락인 캠페인</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout good">
+          <strong>💡 참고:</strong> 이 예측은 3년(2023-2026) 반복 패턴 기반. 신뢰도 높음. 오차 범위는 ±5~10% 수준으로 예상.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 목표 설정 모달 -->
+<div class="modal-backdrop" id="goalModal">
+  <div class="modal">
+    <h3 id="goalModalTitle">목표 설정</h3>
+    <p>목표값을 <strong>%</strong> 단위로 입력하세요. (예: 60)</p>
+    <input type="number" id="goalModalInput" min="0" max="100" step="0.1" placeholder="60" />
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="goalModalRemove">목표 삭제</button>
+      <button class="btn btn-secondary" id="goalModalCancel">취소</button>
+      <button class="btn btn-primary" id="goalModalSave">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   저장소 키 — Google Sheets URL은 페이지 UI에서 관리
+   ===================================================================== */
+const STORAGE_KEY = 'sml_dashboard_data_v1';
+const SHEETS_URL_KEY = 'sml_dashboard_sheets_url_v1';
+const GOALS_KEY = 'sml_dashboard_goals_v1';
+
+const GOAL_LABELS = {
+  activation: 'Activation Rate',
+  courseStart: '강의 시작률',
+  widgetAdoption: 'Widget Adoption',
+  newShare: 'DAU 내 신규 비중',
+};
+const GOAL_DEFAULTS = { activation: 60, courseStart: 90, widgetAdoption: 15, newShare: 20 };
+let goals = {};
+
+const HEADERS = ['date','new_signup','new_first_login','dau','new_device_registered','widget_users'];
+
+const SAMPLE_DATA = [
+  { date:'2025-05-30', new_signup: 85, new_first_login: 62, dau: 4200, new_device_registered: 55, widget_users: 1100 },
+  { date:'2025-05-31', new_signup: 92, new_first_login: 70, dau: 4350, new_device_registered: 63, widget_users: 1180 },
+  { date:'2025-06-01', new_signup:110, new_first_login: 82, dau: 4520, new_device_registered: 75, widget_users: 1220 },
+  { date:'2025-06-02', new_signup:128, new_first_login: 95, dau: 4680, new_device_registered: 88, widget_users: 1305 },
+  { date:'2025-06-03', new_signup:115, new_first_login: 88, dau: 4610, new_device_registered: 81, widget_users: 1290 },
+  { date:'2025-06-04', new_signup: 98, new_first_login: 74, dau: 4470, new_device_registered: 68, widget_users: 1240 },
+  { date:'2025-06-05', new_signup:132, new_first_login: 99, dau: 4720, new_device_registered: 91, widget_users: 1350 },
+];
+
+/* =====================================================================
+   CSV 파서 + 날짜 정규화
+   ===================================================================== */
+function normalizeDate(v) {
+  if (v == null) return '';
+  const s = String(v).trim().replace(/^"|"$/g, ''); // 양끝 따옴표 제거
+  if (!s) return '';
+  // 이미 YYYY-MM-DD 형태
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // YYYY.M.D. / YYYY. M. D. / YYYY. 05. 30 (한국 로케일 Google Sheets 기본값)
+  let m = s.match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?$/);
+  if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  // YYYY/M/D 또는 YYYY-M-D
+  m = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
+  if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  // M/D/YYYY (미국식)
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+  // D-M-YYYY 또는 D.M.YYYY (유럽식)
+  m = s.match(/^(\d{1,2})[.\-](\d{1,2})[.\-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  // "2025년 5월 30일" 한국식 전체 표기
+  m = s.match(/^(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일$/);
+  if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  // 최후: Date 파싱
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  return s; // 인식 실패 시 원본 반환 (사용자가 확인 가능)
+}
+
+function parseCSV(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const lines = text.trim().split(/\r?\n/);
+  const heads = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  return lines.slice(1).map(line => {
+    // 따옴표 안 쉼표 처리를 위한 간단한 파서
+    const vals = [];
+    let cur = '', inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') { inQuote = !inQuote; continue; }
+      if (c === ',' && !inQuote) { vals.push(cur); cur = ''; continue; }
+      cur += c;
+    }
+    vals.push(cur);
+    const row = {};
+    heads.forEach((h, i) => {
+      const v = (vals[i] || '').trim();
+      if (h === 'date') {
+        row[h] = normalizeDate(v);
+      } else if (v === '') {
+        row[h] = '';
+      } else {
+        const num = Number(v.replace(/,/g, '')); // 숫자 안 콤마 제거 (예: "1,100")
+        row[h] = isNaN(num) ? v : num;
+      }
+    });
+    return row;
+  });
+}
+function toCSV(rows) {
+  const head = HEADERS.join(',');
+  const body = rows.map(r => HEADERS.map(h => r[h] ?? '').join(',')).join('\n');
+  return '﻿' + head + '\n' + body;
+}
+
+/* =====================================================================
+   집계
+   ===================================================================== */
+function filterByDate(rows, from, to) {
+  return rows.filter(r => r.date >= from && r.date <= to);
+}
+function aggregateData(rows, range) {
+  if (range === 'daily') return rows;
+  const buckets = new Map();
+  rows.forEach(r => {
+    const d = new Date(r.date);
+    let key;
+    if (range === 'weekly') {
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(d); monday.setDate(diff);
+      key = monday.toISOString().slice(0,10);
+    } else key = r.date.slice(0,7);
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(r);
+  });
+  const sum = (items, k) => items.reduce((s,x) => s + (Number(x[k])||0), 0);
+  const avg = (items, k) => sum(items, k) / items.length;
+  const result = [];
+  for (const [key, items] of buckets) {
+    result.push({
+      date: key,
+      new_signup: Math.round(sum(items, 'new_signup')),
+      new_first_login: Math.round(sum(items, 'new_first_login')),
+      new_device_registered: Math.round(sum(items, 'new_device_registered')),
+      dau: Math.round(avg(items, 'dau')),
+      widget_users: Math.round(avg(items, 'widget_users')),
+    });
+  }
+  return result.sort((a,b) => a.date.localeCompare(b.date));
+}
+
+/* =====================================================================
+   포맷터
+   ===================================================================== */
+const fmtNum = n => (n == null || n === '' || isNaN(n)) ? '—' : Number(n).toLocaleString('ko-KR');
+const fmtPct = n => (n == null || isNaN(n)) ? '—' : (n * 100).toFixed(1) + '%';
+function setDelta(id, prev, curr) {
+  const el = document.getElementById(id);
+  if (!prev || prev === 0 || isNaN(prev) || isNaN(curr)) { el.textContent = '—'; el.className='delta flat'; return; }
+  const diff = ((curr - prev) / prev) * 100;
+  const sign = diff > 0 ? '▲' : (diff < 0 ? '▼' : '–');
+  el.textContent = `${sign} ${Math.abs(diff).toFixed(1)}%`;
+  el.className = 'delta ' + (diff > 0.5 ? 'up' : diff < -0.5 ? 'down' : 'flat');
+}
+
+/* =====================================================================
+   차트
+   ===================================================================== */
+let charts = {};
+const COLOR = {
+  primary: '#FF8551', primarySoft: 'rgba(255,133,81,0.15)',
+  secondary: '#6FB3D9', secondarySoft: 'rgba(111,179,217,0.15)',
+  success: '#7FBA9D', pink: '#E27A9C', purple: '#9C8BD9',
+};
+const baseOpts = {
+  responsive: true, maintainAspectRatio: false,
+  interaction: { mode: 'index', intersect: false },
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#fff', titleColor: '#2D3748', bodyColor: '#2D3748',
+      borderColor: '#F1E4D6', borderWidth: 1, padding: 10, titleFont: { weight: '600' },
+    },
+  },
+  scales: {
+    x: { grid: { display: false }, ticks: { color: '#8A94A6', font: { size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } },
+    y: { beginAtZero: true, grid: { color: '#F4EEE7' }, ticks: { color: '#8A94A6', font: { size: 11 } } },
+  },
+};
+function destroy(name) { if (charts[name]) { charts[name].destroy(); delete charts[name]; } }
+
+function renderAll(data) {
+  if (!data.length) return;
+  const labels = data.map(r => r.date);
+  const last = data[data.length - 1];
+  const prev = data[data.length - 2] || last;
+  const academicAnnotations = makeAcademicAnnotations(labels);
+
+  // 원본 KPI
+  document.getElementById('kpi-dau').textContent = fmtNum(last.dau);
+  document.getElementById('kpi-signup').textContent = fmtNum(last.new_signup);
+  document.getElementById('kpi-firstlogin').textContent = fmtNum(last.new_first_login);
+  document.getElementById('kpi-device').textContent = fmtNum(last.new_device_registered);
+  document.getElementById('kpi-widget').textContent = fmtNum(last.widget_users);
+  setDelta('delta-dau', prev.dau, last.dau);
+  setDelta('delta-signup', prev.new_signup, last.new_signup);
+  setDelta('delta-firstlogin', prev.new_first_login, last.new_first_login);
+  setDelta('delta-device', prev.new_device_registered, last.new_device_registered);
+  setDelta('delta-widget', prev.widget_users, last.widget_users);
+
+  // 파생 KPI (선택 기간 합산 기준)
+  const totalSignup = data.reduce((s,r)=> s + (r.new_signup||0), 0);
+  const totalFirstLogin = data.reduce((s,r)=> s + (r.new_first_login||0), 0);
+  const totalDevice = data.reduce((s,r)=> s + (r.new_device_registered||0), 0);
+  const avgDau = data.reduce((s,r)=> s + (r.dau||0), 0) / data.length;
+  const avgWidget = data.reduce((s,r)=> s + (r.widget_users||0), 0) / data.length;
+
+  const activation = totalSignup > 0 ? totalFirstLogin / totalSignup : 0;
+  const courseStart = totalFirstLogin > 0 ? totalDevice / totalFirstLogin : 0;
+  const widgetRate = avgDau > 0 ? avgWidget / avgDau : 0;
+  const newShare = avgDau > 0 ? (totalFirstLogin / data.length) / avgDau : 0;
+
+  document.getElementById('kpi-activation').textContent = fmtPct(activation);
+  document.getElementById('sub-activation').textContent = `${fmtNum(totalFirstLogin)} / ${fmtNum(totalSignup)}`;
+  document.getElementById('kpi-coursestart').textContent = fmtPct(courseStart);
+  document.getElementById('sub-coursestart').textContent = `${fmtNum(totalDevice)} / ${fmtNum(totalFirstLogin)}`;
+  document.getElementById('kpi-widgetrate').textContent = fmtPct(widgetRate);
+  document.getElementById('sub-widgetrate').textContent = `평균 위젯 ${fmtNum(Math.round(avgWidget))} / DAU ${fmtNum(Math.round(avgDau))}`;
+  document.getElementById('kpi-newshare').textContent = fmtPct(newShare);
+  document.getElementById('sub-newshare').textContent = `평균 신규 ${fmtNum(Math.round(totalFirstLogin/data.length))} / DAU ${fmtNum(Math.round(avgDau))}`;
+
+  // 목표 대비 갭 표시
+  renderGoalInfo('activation', activation * 100);
+  renderGoalInfo('courseStart', courseStart * 100);
+  renderGoalInfo('widgetAdoption', widgetRate * 100);
+  renderGoalInfo('newShare', newShare * 100);
+
+  // 자동 인사이트 (전체 rawData 기준)
+  renderInsights(generateInsights(rawData));
+
+  // YoY 비교 (전체 rawData 기준)
+  renderYoY();
+
+  // 활성화 퍼널 라인
+  destroy('funnel');
+  charts.funnel = new Chart(document.getElementById('chartFunnel'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: '신규 회원', data: data.map(r=>r.new_signup), borderColor: COLOR.primary, backgroundColor: COLOR.primarySoft, fill: true, tension: 0.35, borderWidth: 2.5, pointRadius: 0 },
+        { label: '신규 첫 로그인', data: data.map(r=>r.new_first_login), borderColor: COLOR.secondary, backgroundColor: 'transparent', tension: 0.35, borderWidth: 2.5, pointRadius: 0 },
+        { label: '신규 기기 등록', data: data.map(r=>r.new_device_registered), borderColor: COLOR.success, backgroundColor: 'transparent', tension: 0.35, borderWidth: 2.5, pointRadius: 0 },
+      ],
+    },
+    options: { ...baseOpts, plugins: { ...baseOpts.plugins, annotation: { annotations: academicAnnotations } } },
+  });
+
+  // DAU 라인 + 이상치 마커
+  destroy('dau');
+  const dauOutliers = detectOutliers(data, 'dau');
+  const outMap = new Map(dauOutliers.map(o => [o.date, o]));
+  const outlierPoints = data.map(r => outMap.has(r.date) ? r.dau : null);
+  charts.dau = new Chart(document.getElementById('chartDau'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'DAU', data: data.map(r=>r.dau), borderColor: COLOR.primary, backgroundColor: COLOR.primarySoft, fill: true, tension: 0.35, borderWidth: 2.5, pointRadius: 0 },
+        { label: '이상치 (±2σ)', data: outlierPoints, borderColor: 'transparent', backgroundColor: '#E27A7A', pointRadius: 6, pointHoverRadius: 8, showLine: false, pointStyle: 'circle', pointBorderColor: '#fff', pointBorderWidth: 2 },
+      ],
+    },
+    options: { ...baseOpts, plugins: { ...baseOpts.plugins, legend: { display: dauOutliers.length > 0, position: 'bottom', labels: { boxWidth: 8, boxHeight: 8, font: { size: 11 }, color: '#8A94A6' } }, annotation: { annotations: academicAnnotations } } },
+  });
+
+  // Widget Rate 라인
+  destroy('widgetRate');
+  charts.widgetRate = new Chart(document.getElementById('chartWidgetRate'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Widget Adoption',
+        data: data.map(r => r.dau > 0 ? +((r.widget_users / r.dau) * 100).toFixed(1) : null),
+        borderColor: COLOR.secondary, backgroundColor: COLOR.secondarySoft, fill: true, tension: 0.35, borderWidth: 2.5, pointRadius: 0,
+      }],
+    },
+    options: { ...baseOpts, plugins: { ...baseOpts.plugins, annotation: { annotations: academicAnnotations } }, scales: { x: baseOpts.scales.x, y: { beginAtZero: true, max: 100, grid: { color: '#F4EEE7' }, ticks: { callback: v => v + '%', color: '#8A94A6', font: { size: 11 } } } } },
+  });
+
+  // 파생 종합
+  destroy('derived');
+  charts.derived = new Chart(document.getElementById('chartDerived'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Activation Rate', data: data.map(r => r.new_signup > 0 ? +((r.new_first_login / r.new_signup) * 100).toFixed(1) : null), borderColor: COLOR.primary, backgroundColor: 'transparent', tension: 0.35, borderWidth: 2.5, pointRadius: 0 },
+        { label: '강의 시작률', data: data.map(r => r.new_first_login > 0 ? +((r.new_device_registered / r.new_first_login) * 100).toFixed(1) : null), borderColor: COLOR.success, backgroundColor: 'transparent', tension: 0.35, borderWidth: 2.5, pointRadius: 0 },
+        { label: 'Widget Adoption', data: data.map(r => r.dau > 0 ? +((r.widget_users / r.dau) * 100).toFixed(1) : null), borderColor: COLOR.secondary, backgroundColor: 'transparent', tension: 0.35, borderWidth: 2.5, pointRadius: 0 },
+      ],
+    },
+    options: { ...baseOpts, plugins: { ...baseOpts.plugins, legend: { display: true, position: 'bottom', labels: { boxWidth: 8, boxHeight: 8, font: { size: 11 }, color: '#8A94A6' } }, annotation: { annotations: academicAnnotations } }, scales: { x: baseOpts.scales.x, y: { beginAtZero: true, grid: { color: '#F4EEE7' }, ticks: { callback: v => v + '%', color: '#8A94A6', font: { size: 11 } } } } },
+  });
+
+  // 기간 표시
+  document.getElementById('rangeInfo').textContent = `기간: ${data[0].date} ~ ${data[data.length-1].date} · ${data.length}개 구간`;
+}
+
+/* =====================================================================
+   데이터 저장/로드 (localStorage)
+   ===================================================================== */
+function saveLocal(rows) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(rows)); } catch(e) {} }
+function loadLocal() {
+  try { const s = localStorage.getItem(STORAGE_KEY); return s ? JSON.parse(s) : null; } catch(e) { return null; }
+}
+function loadSheetsUrl() { try { return localStorage.getItem(SHEETS_URL_KEY) || ''; } catch(e) { return ''; } }
+function saveSheetsUrl(url) { try { localStorage.setItem(SHEETS_URL_KEY, url); } catch(e) {} }
+function clearSheetsUrl_() { try { localStorage.removeItem(SHEETS_URL_KEY); } catch(e) {} }
+function loadGoals() { try { return JSON.parse(localStorage.getItem(GOALS_KEY) || '{}'); } catch(e) { return {}; } }
+function saveGoals() { try { localStorage.setItem(GOALS_KEY, JSON.stringify(goals)); } catch(e) {} }
+
+/* ---- 학사 일정 오버레이 (모평·수능·방학·시험) ---- */
+const ACADEMIC_EVENTS = [
+  // 모평 (교육청 학평 포함 대략)
+  { date:'2025-06-04', type:'mock', label:'6월 모평' },
+  { date:'2025-09-03', type:'mock', label:'9월 모평' },
+  { date:'2025-11-13', type:'suneung', label:'🎯 수능' },
+  { date:'2026-03-26', type:'mock', label:'3월 학평' },
+  { date:'2026-06-04', type:'mock', label:'6월 모평' },
+  { date:'2026-09-03', type:'mock', label:'9월 모평' },
+  { date:'2026-11-12', type:'suneung', label:'🎯 수능' },
+];
+const ACADEMIC_SEASONS = [
+  // 2025년
+  { start:'2025-06-23', end:'2025-07-04', type:'exam',   label:'기말고사' },   // 1학기 기말
+  { start:'2025-07-15', end:'2025-08-25', type:'summer', label:'여름방학' },
+  { start:'2025-10-13', end:'2025-10-24', type:'exam',   label:'중간고사' },   // 2학기 중간
+  { start:'2025-12-01', end:'2025-12-12', type:'exam',   label:'기말고사' },   // 2학기 기말
+  { start:'2025-12-20', end:'2026-02-05', type:'winter', label:'겨울방학' },
+  // 2026년
+  { start:'2026-04-27', end:'2026-05-08', type:'exam',   label:'중간고사' },   // 1학기 중간
+  { start:'2026-06-22', end:'2026-07-03', type:'exam',   label:'기말고사' },   // 1학기 기말
+  { start:'2026-07-20', end:'2026-08-25', type:'summer', label:'여름방학' },
+  { start:'2026-10-12', end:'2026-10-23', type:'exam',   label:'중간고사' },   // 2학기 중간
+  { start:'2026-12-01', end:'2026-12-12', type:'exam',   label:'기말고사' },   // 2학기 기말
+];
+
+function makeAcademicAnnotations(labels) {
+  if (!labels || !labels.length) return {};
+  const labelSet = new Set(labels);
+  const first = labels[0];
+  const last = labels[labels.length - 1];
+
+  // 대상 날짜를 labels에 실제 존재하는 키로 매핑 (없으면 null)
+  // - daily: 정확 매칭 or 이전 가장 가까운 label
+  // - weekly: 해당 주 월요일 label
+  // - monthly: YYYY-MM label
+  function toLabelKey(dateStr) {
+    if (labelSet.has(dateStr)) return dateStr;
+    const ym = dateStr.slice(0, 7);
+    if (labelSet.has(ym)) return ym;
+    // 주별 (월요일 계산)
+    const d = new Date(dateStr);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const mon = new Date(d); mon.setDate(diff);
+    const monStr = mon.toISOString().slice(0, 10);
+    if (labelSet.has(monStr)) return monStr;
+    // 가장 가까운 이전 label
+    let best = null;
+    for (const l of labels) {
+      if (l <= dateStr && (!best || l > best)) best = l;
+    }
+    return best;
+  }
+
+  const annotations = {};
+
+  ACADEMIC_EVENTS.forEach((e, i) => {
+    // 데이터 범위 밖이면 스킵
+    if (e.date < first || e.date > last) return;
+    const key = toLabelKey(e.date);
+    if (!key) return;
+    annotations[`ev_${i}`] = {
+      type: 'line',
+      xMin: key, xMax: key,
+      borderColor: e.type === 'suneung' ? 'rgba(226, 122, 122, 0.75)' : 'rgba(242, 184, 92, 0.7)',
+      borderWidth: e.type === 'suneung' ? 2 : 1.5,
+      borderDash: e.type === 'suneung' ? [] : [4, 3],
+      label: {
+        display: true, content: e.label, position: 'start',
+        backgroundColor: e.type === 'suneung' ? '#E27A7A' : '#F2B85C',
+        color: '#fff', font: { size: 10, weight: '600' }, padding: { x: 5, y: 2 },
+        yAdjust: -6,
+      }
+    };
+  });
+
+  ACADEMIC_SEASONS.forEach((s, i) => {
+    // 데이터 범위와 겹침 없음이면 스킵
+    if (s.end < first || s.start > last) return;
+    // labels 안에서 시즌 범위와 겹치는 최소·최대 label 찾기
+    let startKey = null, endKey = null;
+    for (const l of labels) {
+      if (l >= s.start && l <= s.end) {
+        if (!startKey) startKey = l;
+        endKey = l;
+      }
+    }
+    if (!startKey || !endKey) return; // 겹치는 label 없음
+    const bg = s.type === 'summer' ? 'rgba(127, 186, 157, 0.12)'
+             : s.type === 'winter' ? 'rgba(111, 179, 217, 0.12)'
+             :                       'rgba(156, 139, 217, 0.12)';
+    annotations[`sn_${i}`] = {
+      type: 'box',
+      xMin: startKey, xMax: endKey,
+      backgroundColor: bg, borderWidth: 0,
+      label: {
+        display: true, content: s.label, position: { x: 'center', y: 'start' },
+        color: s.type === 'summer' ? '#4E8C6B' : s.type === 'winter' ? '#3F7CA0' : '#6E5FA8',
+        font: { size: 10, weight: '600' },
+        backgroundColor: 'rgba(255,255,255,0.85)', padding: { x: 5, y: 1 },
+        yAdjust: 12,
+      }
+    };
+  });
+  return annotations;
+}
+
+/* ---- 이상치 감지 & 인사이트 생성 ---- */
+function detectOutliers(data, key, windowN) {
+  const w = windowN ? data.slice(-windowN) : data;
+  const vals = w.map(r => Number(r[key]) || 0);
+  const n = vals.length;
+  if (n < 5) return [];
+  const mean = vals.reduce((s,v) => s+v, 0) / n;
+  const sd = Math.sqrt(vals.reduce((s,v) => s + (v-mean)**2, 0) / n);
+  if (sd === 0) return [];
+  const result = [];
+  w.forEach((r, i) => {
+    const z = (vals[i] - mean) / sd;
+    if (Math.abs(z) > 2) result.push({ date: r.date, value: vals[i], z });
+  });
+  return result;
+}
+
+function generateInsights(data) {
+  const insights = [];
+  const n = data.length;
+  if (n < 14) {
+    insights.push({ type:'info', title:'📊 데이터 축적 중', value:`${n}일`, body:'30일 이상 쌓이면 정확한 인사이트가 나옵니다.' });
+    return insights;
+  }
+  // 성장 상태
+  if (n >= 60) {
+    const rec = data.slice(-30), pre = data.slice(-60, -30);
+    const rDau = rec.reduce((s,r)=>s+r.dau,0)/rec.length;
+    const pDau = pre.reduce((s,r)=>s+r.dau,0)/pre.length;
+    const g = ((rDau-pDau)/pDau)*100;
+    let t='info', ti='➡️ 성장 안정';
+    if (g > 10) { t='good'; ti='🚀 성장 중'; }
+    else if (g < -5) { t='bad'; ti='⚠️ DAU 하락'; }
+    insights.push({ type:t, title:ti, value:`${g >= 0 ? '▲' : '▼'} ${Math.abs(g).toFixed(1)}%`, body:`최근 30일 평균 DAU ${Math.round(rDau).toLocaleString()} · 이전 30일 대비` });
+  }
+  // Activation Rate 목표 대비
+  const totalSig = data.reduce((s,r)=>s+(r.new_signup||0),0);
+  const totalFl  = data.reduce((s,r)=>s+(r.new_first_login||0),0);
+  const act = totalSig > 0 ? (totalFl/totalSig)*100 : 0;
+  const actGoal = goals.activation != null ? goals.activation : GOAL_DEFAULTS.activation;
+  const actGap = act - actGoal;
+  let actType = actGap >= 0 ? 'good' : (actGap > -10 ? 'warn' : 'bad');
+  insights.push({
+    type: actType, title:'🎯 Activation Rate',
+    value: `${act.toFixed(1)}%`,
+    body: `${goals.activation != null ? '설정' : '기본'} 목표 ${actGoal}% · ${actGap >= 0 ? '달성 (+' : '갭 '}${actGap.toFixed(1)}${actGap >= 0 ? 'p)' : 'p'}`
+  });
+  // 이상치
+  const last90 = data.slice(-90);
+  const outs = detectOutliers(last90, 'dau');
+  if (outs.length > 0) {
+    const latest = outs[outs.length-1];
+    const up = outs.filter(o => o.z > 0).length;
+    const down = outs.filter(o => o.z < 0).length;
+    insights.push({
+      type: down > up ? 'warn' : 'info', title:'⚠️ 최근 90일 이상치',
+      value: `${outs.length}건`,
+      body: `↑ 급등 ${up}건 · ↓ 급락 ${down}건 · 최근: ${latest.date} (${latest.z > 0 ? '급등' : '급락'})`
+    });
+  }
+  // 요일 패턴
+  const wd = {};
+  data.forEach(r => { const d = new Date(r.date).getDay(); if (!wd[d]) wd[d] = []; wd[d].push(r.dau); });
+  const avgOf = ks => { const a = ks.filter(k => wd[k]).map(k => wd[k].reduce((s,v)=>s+v,0)/wd[k].length); return a.length ? a.reduce((s,v)=>s+v,0)/a.length : 0; };
+  const wk = avgOf([1,2,3,4,5]);
+  const we = avgOf([0,6]);
+  if (wk > 0 && we > 0) {
+    const drop = ((wk-we)/wk)*100;
+    insights.push({
+      type:'info', title:'📅 요일 패턴',
+      value: `주말 ${drop >= 0 ? '-' : '+'}${Math.abs(drop).toFixed(1)}%`,
+      body: `평일 평균 ${Math.round(wk).toLocaleString()} · 주말 평균 ${Math.round(we).toLocaleString()}`
+    });
+  }
+  // Widget Adoption 목표 대비
+  const avgDau = data.reduce((s,r)=>s+(r.dau||0),0)/data.length;
+  const avgWid = data.reduce((s,r)=>s+(r.widget_users||0),0)/data.length;
+  const wRate = avgDau > 0 ? (avgWid/avgDau)*100 : 0;
+  const wGoal = goals.widgetAdoption != null ? goals.widgetAdoption : GOAL_DEFAULTS.widgetAdoption;
+  const wGap = wRate - wGoal;
+  let wType = wGap >= 0 ? 'good' : (wGap > -5 ? 'warn' : 'bad');
+  insights.push({
+    type: wType, title:'💠 Widget Adoption',
+    value: `${wRate.toFixed(1)}%`,
+    body: `${goals.widgetAdoption != null ? '설정' : '기본'} 목표 ${wGoal}% · ${wGap >= 0 ? '달성 (+' : '갭 '}${wGap.toFixed(1)}${wGap >= 0 ? 'p)' : 'p'}`
+  });
+  // 강의 시작률
+  const totalDev = data.reduce((s,r)=>s+(r.new_device_registered||0),0);
+  const cs = totalFl > 0 ? (totalDev/totalFl)*100 : 0;
+  const csGoal = goals.courseStart != null ? goals.courseStart : GOAL_DEFAULTS.courseStart;
+  const csGap = cs - csGoal;
+  if (cs > 110) {
+    insights.push({
+      type:'warn', title:'⚠️ 강의 시작률 이상',
+      value: `${cs.toFixed(1)}%`,
+      body: `100% 초과 — 지표 정의 재확인 필요 (기기 수 vs 유저 수 분모/분자 검토)`
+    });
+  } else {
+    let csType = csGap >= 0 ? 'good' : (csGap > -10 ? 'warn' : 'bad');
+    insights.push({
+      type: csType, title:'📚 강의 시작률',
+      value: `${cs.toFixed(1)}%`,
+      body: `${goals.courseStart != null ? '설정' : '기본'} 목표 ${csGoal}% · ${csGap >= 0 ? '달성 (+' : '갭 '}${csGap.toFixed(1)}${csGap >= 0 ? 'p)' : 'p'}`
+    });
+  }
+  return insights;
+}
+
+function renderInsights(insights) {
+  const el = document.getElementById('insightCards');
+  el.innerHTML = insights.map(i => `
+    <div class="insight-card ${i.type}">
+      <div class="ic-title">${i.title}</div>
+      <div class="ic-value">${i.value}</div>
+      <div class="ic-body">${i.body}</div>
+    </div>
+  `).join('');
+}
+
+/* ---- YoY (금년 vs 전년) 비교 ---- */
+let yoyMode = 'week';
+
+function ymd_(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+function addDays_(d, n) { const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+
+function calcYoY(mode) {
+  if (!rawData.length) return null;
+  // "접근일 전날까지" = 데이터의 최신일을 기준
+  const yesterday = new Date(rawData[rawData.length-1].date + 'T00:00:00');
+  let curS, curE, prevS, prevE, label;
+  if (mode === 'week') {
+    curE = new Date(yesterday);
+    curS = addDays_(curE, -6);
+    // 전년 동일 요일: 52주(=364일) 전
+    prevE = addDays_(curE, -364);
+    prevS = addDays_(curS, -364);
+    label = `접근일 전날까지 7일 (전년 동일 <strong>요일</strong> 대비)`;
+  } else if (mode === 'month') {
+    curS = new Date(yesterday.getFullYear(), yesterday.getMonth(), 1);
+    curE = new Date(yesterday);
+    prevS = new Date(yesterday.getFullYear()-1, yesterday.getMonth(), 1);
+    prevE = new Date(yesterday.getFullYear()-1, yesterday.getMonth(), yesterday.getDate());
+    label = `이번 달 1일 ~ 어제 (전년 동일 <strong>날짜</strong> 대비)`;
+  } else {
+    curS = new Date(yesterday.getFullYear(), 0, 1);
+    curE = new Date(yesterday);
+    prevS = new Date(yesterday.getFullYear()-1, 0, 1);
+    prevE = new Date(yesterday.getFullYear()-1, yesterday.getMonth(), yesterday.getDate());
+    label = `올해 1/1 ~ 어제 (전년 동일 <strong>기간</strong> 대비)`;
+  }
+  const cur = rawData.filter(r => r.date >= ymd_(curS) && r.date <= ymd_(curE));
+  const prev = rawData.filter(r => r.date >= ymd_(prevS) && r.date <= ymd_(prevE));
+  return { curS, curE, prevS, prevE, cur, prev, label };
+}
+
+function _agg(data, key, mode) {
+  const vals = data.map(r => Number(r[key]) || 0);
+  if (!vals.length) return 0;
+  return mode === 'avg' ? vals.reduce((s,v)=>s+v,0)/vals.length : vals.reduce((s,v)=>s+v,0);
+}
+
+function renderYoY() {
+  const y = calcYoY(yoyMode);
+  const wrap = document.getElementById('yoyTableWrap');
+  const desc = document.getElementById('yoyDesc');
+  if (!y) { wrap.innerHTML = ''; desc.textContent = '데이터가 없습니다.'; return; }
+  desc.innerHTML = `${y.label}<br/>
+    금년: <strong>${ymd_(y.curS)} ~ ${ymd_(y.curE)}</strong> (${y.cur.length}일)
+    · 전년: <strong>${ymd_(y.prevS)} ~ ${ymd_(y.prevE)}</strong> (${y.prev.length}일)`;
+
+  const metrics = [
+    { key:'new_signup',            label:'신규 회원 (합계)',       mode:'sum' },
+    { key:'new_first_login',       label:'신규 첫 로그인 (합계)',  mode:'sum' },
+    { key:'new_device_registered', label:'신규 기기 등록 (합계)',  mode:'sum' },
+    { key:'dau',                   label:'DAU (일평균)',           mode:'avg' },
+    { key:'widget_users',          label:'위젯 이용자 (일평균)',   mode:'avg' },
+  ];
+
+  const rows = metrics.map(m => {
+    const c = _agg(y.cur,  m.key, m.mode);
+    const p = _agg(y.prev, m.key, m.mode);
+    const hasPrev = y.prev.length > 0;
+    const gap = (hasPrev && p > 0) ? ((c-p)/p) * 100 : null;
+    let deltaHtml = '<span style="color:var(--muted)">데이터 없음</span>';
+    if (gap != null) {
+      const sign = gap > 0 ? '▲' : (gap < 0 ? '▼' : '–');
+      const cls = gap > 0.5 ? 'up' : (gap < -0.5 ? 'down' : 'flat');
+      deltaHtml = `<span class="delta ${cls}">${sign} ${Math.abs(gap).toFixed(1)}%</span>`;
+    }
+    return `
+      <tr>
+        <td>${m.label}</td>
+        <td class="strong">${Math.round(c).toLocaleString('ko-KR')}</td>
+        <td>${hasPrev ? Math.round(p).toLocaleString('ko-KR') : '<span style="color:var(--muted)">—</span>'}</td>
+        <td>${deltaHtml}</td>
+      </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <table class="yoy-table">
+      <thead>
+        <tr>
+          <th>지표</th>
+          <th>금년 (${y.curS.getFullYear()})</th>
+          <th>전년 (${y.prevS.getFullYear()})</th>
+          <th>증감률</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function renderGoalInfo(key, actualPct) {
+  const el = document.getElementById('goal-' + key);
+  if (!el) return;
+  if (goals[key] == null) { el.innerHTML = ''; return; }
+  const goal = goals[key];
+  const gap = actualPct - goal;
+  const cls = gap >= 0 ? 'ok' : (gap > -5 ? 'near' : 'miss');
+  const sign = gap >= 0 ? '+' : '';
+  el.innerHTML = `<div class="goal-info ${cls}">🎯 목표 ${goal}% · ${sign}${gap.toFixed(1)}p</div>`;
+}
+
+function normalizeSheetsUrl(url) {
+  // 이미 pub?output=csv 형태 (파일→공유→웹에 게시) — 그대로 사용
+  if (/\/pub.*output=csv/.test(url)) return url;
+  // 편집/보기 URL을 export?format=csv로 자동 변환
+  const idMatch = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (!idMatch) return url;
+  const id = idMatch[1];
+  const gidMatch = url.match(/[?&#]gid=(\d+)/);
+  const gid = gidMatch ? gidMatch[1] : '0';
+  return `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
+}
+
+async function fetchSheetsData(url) {
+  const finalUrl = normalizeSheetsUrl(url);
+  const res = await fetch(finalUrl, { cache: 'no-store' });
+  if (!res.ok) throw new Error('HTTP ' + res.status + ' — 시트가 "링크가 있는 모든 사용자"로 공유되어 있는지 확인해주세요.');
+  const text = await res.text();
+  // 로그인 페이지 HTML이 온 경우 감지
+  if (/<html/i.test(text.slice(0, 200))) {
+    throw new Error('시트에 접근할 수 없습니다. Sheets 우상단 [공유] → "링크가 있는 모든 사용자"를 [뷰어]로 설정해주세요.');
+  }
+  const rows = parseCSV(text).filter(r => r.date);
+  if (!rows.length) throw new Error('시트에서 유효한 데이터를 찾지 못했습니다. 컬럼명(date, new_signup 등)이 템플릿과 일치하는지 확인해주세요.');
+  return rows;
+}
+
+function updateSheetsUI() {
+  const status = document.getElementById('sheetsStatus');
+  const statusText = document.getElementById('sheetsStatusText');
+  const connectBtn = document.getElementById('connectSheets');
+  const disconnectBtn = document.getElementById('disconnectSheets');
+  const refreshBtn = document.getElementById('refreshSheets');
+  const urlInput = document.getElementById('sheetsUrlInput');
+  if (isSheetsMode) {
+    status.classList.add('connected'); status.classList.remove('disconnected');
+    statusText.textContent = '✅ Google Sheets 연결됨 · 편집은 시트에서, 새로고침 버튼으로 갱신';
+    connectBtn.style.display = 'none';
+    disconnectBtn.style.display = '';
+    refreshBtn.style.display = '';
+    urlInput.value = loadSheetsUrl();
+    urlInput.disabled = true;
+  } else {
+    status.classList.remove('connected'); status.classList.add('disconnected');
+    statusText.textContent = '🔓 로컬 편집 모드 (연결된 시트 없음)';
+    connectBtn.style.display = '';
+    disconnectBtn.style.display = 'none';
+    refreshBtn.style.display = 'none';
+    urlInput.disabled = false;
+  }
+}
+
+/* =====================================================================
+   입력 테이블
+   ===================================================================== */
+let rawData = [];
+let currentRange = 'daily';
+let customFrom = null, customTo = null;
+let isSheetsMode = false;
+
+function renderTable() {
+  const tbody = document.getElementById('dataTbody');
+  tbody.innerHTML = '';
+  rawData.forEach((row, idx) => {
+    const tr = document.createElement('tr');
+    HEADERS.forEach(h => {
+      const td = document.createElement('td');
+      const inp = document.createElement('input');
+      inp.type = (h === 'date') ? 'date' : 'number';
+      inp.value = row[h] ?? '';
+      inp.disabled = isSheetsMode;
+      inp.addEventListener('change', () => {
+        row[h] = inp.type === 'number' ? (inp.value === '' ? '' : Number(inp.value)) : inp.value;
+        rawData.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+        saveLocal(rawData);
+        applyView();
+      });
+      td.appendChild(inp);
+      tr.appendChild(td);
+    });
+    const delTd = document.createElement('td');
+    delTd.className = 'del-cell';
+    if (!isSheetsMode) {
+      const delBtn = document.createElement('button');
+      delBtn.className = 'del-btn';
+      delBtn.textContent = '✕';
+      delBtn.title = '삭제';
+      delBtn.addEventListener('click', () => {
+        rawData.splice(idx, 1);
+        saveLocal(rawData);
+        renderTable();
+        applyView();
+      });
+      delTd.appendChild(delBtn);
+    }
+    tr.appendChild(delTd);
+    tbody.appendChild(tr);
+  });
+}
+
+/* =====================================================================
+   기간 필터 & 초기화
+   ===================================================================== */
+function applyView() {
+  if (!rawData.length) return;
+  let data = [...rawData].sort((a,b)=> a.date.localeCompare(b.date));
+  // 기간 필터는 항상 적용 (customFrom·customTo 존재 시)
+  if (customFrom && customTo) data = filterByDate(data, customFrom, customTo);
+  // 집계 단위(daily/weekly/monthly) 적용
+  data = aggregateData(data, currentRange);
+  renderAll(data);
+  // 날짜 input 범위 갱신
+  document.getElementById('dateFrom').min = rawData[0].date;
+  document.getElementById('dateFrom').max = rawData[rawData.length-1].date;
+  document.getElementById('dateTo').min = rawData[0].date;
+  document.getElementById('dateTo').max = rawData[rawData.length-1].date;
+}
+
+function updateLastUpdated() {
+  const now = new Date();
+  document.getElementById('lastUpdated').textContent = `마지막 갱신: ${now.toLocaleString('ko-KR', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })}`;
+}
+
+/* =====================================================================
+   이벤트 바인딩
+   ===================================================================== */
+document.querySelectorAll('.seg button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const range = btn.dataset.range;
+    // 페이지 안의 모든 필터 UI 동기화 (상단·차트 위)
+    document.querySelectorAll('.seg button').forEach(b => {
+      b.classList.toggle('active', b.dataset.range === range);
+    });
+    currentRange = range;
+    applyView();
+  });
+});
+document.getElementById('applyRange').addEventListener('click', () => {
+  const f = document.getElementById('dateFrom').value;
+  const t = document.getElementById('dateTo').value;
+  if (!f || !t) { alert('시작일과 종료일을 선택해주세요.'); return; }
+  if (f > t) { alert('시작일이 종료일보다 늦을 수 없습니다.'); return; }
+  customFrom = f;
+  customTo = t;
+  applyView();
+});
+document.getElementById('resetRange').addEventListener('click', () => {
+  if (!rawData.length) return;
+  customFrom = rawData[0].date;
+  customTo = rawData[rawData.length-1].date;
+  document.getElementById('dateFrom').value = customFrom;
+  document.getElementById('dateTo').value = customTo;
+  applyView();
+});
+// 날짜 input 변경 시 자동 반영 (엔터 or 선택 완료 시)
+document.getElementById('dateFrom').addEventListener('change', (e) => {
+  const f = e.target.value;
+  if (!f) return;
+  if (customTo && f > customTo) { alert('시작일이 종료일보다 늦을 수 없습니다.'); e.target.value = customFrom; return; }
+  customFrom = f;
+  applyView();
+});
+document.getElementById('dateTo').addEventListener('change', (e) => {
+  const t = e.target.value;
+  if (!t) return;
+  if (customFrom && t < customFrom) { alert('종료일이 시작일보다 빠를 수 없습니다.'); e.target.value = customTo; return; }
+  customTo = t;
+  applyView();
+});
+document.getElementById('addRow').addEventListener('click', () => {
+  const lastDate = rawData.length ? rawData[rawData.length-1].date : '2025-05-30';
+  const next = new Date(lastDate); next.setDate(next.getDate()+1);
+  rawData.push({ date: next.toISOString().slice(0,10), new_signup:0, new_first_login:0, dau:0, new_device_registered:0, widget_users:0 });
+  saveLocal(rawData);
+  renderTable();
+  applyView();
+});
+document.getElementById('exportCsv').addEventListener('click', () => {
+  const csv = toCSV(rawData);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `dashboard_data_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+document.getElementById('importCsv').addEventListener('click', () => document.getElementById('csvFileInput').click());
+document.getElementById('csvFileInput').addEventListener('change', (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const rows = parseCSV(reader.result);
+      rawData = rows.filter(r => r.date);
+      saveLocal(rawData);
+      renderTable();
+      applyView();
+    } catch(err) { alert('CSV 파싱 오류: ' + err.message); }
+  };
+  reader.readAsText(file, 'utf-8');
+  e.target.value = '';
+});
+document.getElementById('loadSample').addEventListener('click', () => {
+  if (isSheetsMode) { alert('시트 연결 모드에서는 사용할 수 없습니다. 먼저 연결을 해제하세요.'); return; }
+  if (!confirm('현재 데이터를 지우고 샘플 데이터로 초기화합니다. 계속하시겠습니까?')) return;
+  rawData = JSON.parse(JSON.stringify(SAMPLE_DATA));
+  saveLocal(rawData);
+  renderTable();
+  applyView();
+});
+
+/* Google Sheets 연결 이벤트 */
+document.getElementById('connectSheets').addEventListener('click', async () => {
+  const urlInput = document.getElementById('sheetsUrlInput');
+  const url = urlInput.value.trim();
+  if (!url) { alert('Google Sheets 게시 URL을 입력해주세요.'); return; }
+  if (!/^https?:\/\//.test(url)) { alert('올바른 URL 형식이 아닙니다. (https://...로 시작)'); return; }
+  const btn = document.getElementById('connectSheets');
+  const prev = btn.textContent; btn.textContent = '연결 중...'; btn.disabled = true;
+  try {
+    const rows = await fetchSheetsData(url);
+    saveSheetsUrl(url);
+    isSheetsMode = true;
+    rawData = rows.sort((a,b) => a.date.localeCompare(b.date));
+    updateSheetsUI();
+    renderTable();
+    applyView();
+    updateLastUpdated();
+    alert('✅ 시트 연결이 완료되었습니다!\n\n이후 시트에 데이터를 추가하시고, [🔄 새로고침] 버튼을 눌러 반영하세요.');
+  } catch(e) {
+    alert('❌ 시트 연결 실패: ' + e.message + '\n\n확인 사항:\n1) 시트가 "파일 → 공유 → 웹에 게시"로 게시되었나요?\n2) 형식이 "쉼표로 구분된 값(.csv)"인가요?\n3) 컬럼명이 템플릿과 일치하나요?');
+  } finally {
+    btn.textContent = prev; btn.disabled = false;
+  }
+});
+
+document.getElementById('disconnectSheets').addEventListener('click', () => {
+  if (!confirm('시트 연결을 해제하시겠어요?\n로컬 편집 모드로 전환되며, 이전에 저장된 로컬 데이터로 돌아갑니다.')) return;
+  clearSheetsUrl_();
+  isSheetsMode = false;
+  rawData = loadLocal() || JSON.parse(JSON.stringify(SAMPLE_DATA));
+  updateSheetsUI();
+  renderTable();
+  applyView();
+});
+
+document.getElementById('refreshSheets').addEventListener('click', async () => {
+  const url = loadSheetsUrl();
+  if (!url) return;
+  const btn = document.getElementById('refreshSheets');
+  const prev = btn.textContent; btn.textContent = '불러오는 중...'; btn.disabled = true;
+  try {
+    rawData = (await fetchSheetsData(url)).sort((a,b) => a.date.localeCompare(b.date));
+    renderTable();
+    applyView();
+    updateLastUpdated();
+  } catch(e) {
+    alert('❌ 새로고침 실패: ' + e.message);
+  } finally {
+    btn.textContent = prev; btn.disabled = false;
+  }
+});
+
+/* =====================================================================
+   초기화
+   ===================================================================== */
+/* 인사이트 모달 */
+document.getElementById('openInsightModal').addEventListener('click', () => {
+  document.getElementById('insightModal').classList.add('show');
+});
+document.getElementById('closeInsightModal').addEventListener('click', () => {
+  document.getElementById('insightModal').classList.remove('show');
+});
+document.getElementById('insightModal').addEventListener('click', (e) => {
+  if (e.target.id === 'insightModal') e.target.classList.remove('show');
+});
+document.querySelectorAll('.insight-tabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.insight-tabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ['mapping','findings','forecast'].forEach(t => {
+      document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
+    });
+    // 모달 상단으로 스크롤
+    document.querySelector('.insight-modal-body').scrollTop = 0;
+  });
+});
+// ESC 키로 닫기
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.getElementById('insightModal').classList.remove('show');
+    document.getElementById('goalModal').classList.remove('show');
+  }
+});
+
+/* YoY 탭 스위칭 */
+document.querySelectorAll('.yoy-seg button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.yoy-seg button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    yoyMode = btn.dataset.yoy;
+    renderYoY();
+  });
+});
+
+/* 목표 설정 모달 */
+let currentGoalKey = null;
+document.querySelectorAll('.goal-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    currentGoalKey = btn.dataset.goal;
+    document.getElementById('goalModalTitle').textContent = GOAL_LABELS[currentGoalKey] + ' 목표 설정';
+    document.getElementById('goalModalInput').value = goals[currentGoalKey] != null ? goals[currentGoalKey] : '';
+    document.getElementById('goalModalInput').placeholder = '예: ' + GOAL_DEFAULTS[currentGoalKey];
+    document.getElementById('goalModal').classList.add('show');
+    setTimeout(() => document.getElementById('goalModalInput').focus(), 50);
+  });
+});
+document.getElementById('goalModalCancel').addEventListener('click', () => {
+  document.getElementById('goalModal').classList.remove('show');
+});
+document.getElementById('goalModal').addEventListener('click', (e) => {
+  if (e.target.id === 'goalModal') document.getElementById('goalModal').classList.remove('show');
+});
+document.getElementById('goalModalSave').addEventListener('click', () => {
+  const val = parseFloat(document.getElementById('goalModalInput').value);
+  if (isNaN(val) || val < 0 || val > 100) { alert('0 ~ 100 사이 숫자를 입력해주세요.'); return; }
+  goals[currentGoalKey] = val;
+  saveGoals();
+  document.getElementById('goalModal').classList.remove('show');
+  applyView();
+});
+document.getElementById('goalModalRemove').addEventListener('click', () => {
+  delete goals[currentGoalKey];
+  saveGoals();
+  document.getElementById('goalModal').classList.remove('show');
+  applyView();
+});
+
+(async function init() {
+  goals = loadGoals();
+  const savedUrl = loadSheetsUrl();
+  if (savedUrl) {
+    try {
+      rawData = await fetchSheetsData(savedUrl);
+      isSheetsMode = true;
+    } catch(e) {
+      console.warn('저장된 Sheets URL 로드 실패:', e);
+      rawData = loadLocal() || JSON.parse(JSON.stringify(SAMPLE_DATA));
+      isSheetsMode = false;
+    }
+  } else {
+    rawData = loadLocal() || JSON.parse(JSON.stringify(SAMPLE_DATA));
+    isSheetsMode = false;
+  }
+  rawData.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+  if (rawData.length) {
+    const dataMin = rawData[0].date;
+    const dataMax = rawData[rawData.length-1].date;
+    // 초기 기본 범위: 접근월 1일 ~ 어제 (데이터 범위와 교집합)
+    const today = new Date();
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+    const _ymd = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth()+1).padStart(2,'0');
+      const dd = String(d.getDate()).padStart(2,'0');
+      return `${y}-${m}-${dd}`;
+    };
+    let initFrom = _ymd(monthStart);
+    let initTo = _ymd(yesterday);
+    if (initFrom < dataMin) initFrom = dataMin;
+    if (initTo > dataMax) initTo = dataMax;
+    if (initFrom > initTo) { initFrom = dataMin; initTo = dataMax; } // 데이터 없는 경우 fallback
+
+    document.getElementById('dateFrom').value = initFrom;
+    document.getElementById('dateTo').value = initTo;
+    document.getElementById('dateFrom').min = dataMin;
+    document.getElementById('dateFrom').max = dataMax;
+    document.getElementById('dateTo').min = dataMin;
+    document.getElementById('dateTo').max = dataMax;
+
+    // 기본 상태: 일별 + 접근월 1일 ~ 어제
+    currentRange = 'daily';
+    customFrom = initFrom;
+    customTo = initTo;
+    document.querySelectorAll('.seg button').forEach(b => {
+      b.classList.toggle('active', b.dataset.range === 'daily');
+    });
+    document.getElementById('dateRange').classList.add('show');
+  }
+  updateSheetsUI();
+  renderTable();
+  applyView();
+  updateLastUpdated();
+})();
+</script>
+</body>
+</html>
